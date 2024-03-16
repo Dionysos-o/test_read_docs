@@ -1,0 +1,166 @@
+---
+title: "Figure for kmap paper"
+author: "Chengbo Fu"
+format: html
+editor: visual
+---
+
+### 1, clustering figure
+
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+getwd()
+setwd("./ht_selex_visual/SOX9")
+
+data_strings <- read.csv("sample_kmer.csv", header =  FALSE, col.names = c("string"))
+
+data_coordinates <- read.csv("ld_data.csv", header = FALSE)
+
+
+transposed_data_coordinates <- t(data_coordinates)
+
+
+transposed_data_coordinates <- as.data.frame(transposed_data_coordinates)
+
+
+colnames(transposed_data_coordinates) <- c("x_coord", "y_coord")
+
+data_labels <- read.csv("sample_labels.csv",  header = FALSE, col.names = c("label"))
+
+data_combined <- cbind(data_strings, data_labels)
+
+sequences_label1 <- subset(data_combined, label == "label1", select = string)
+
+
+data_ge = cbind(data_strings, transposed_data_coordinates,data_labels)
+
+data_ge$label <- as.factor(data_ge$label)
+# 
+palette <- brewer.pal(7, "Dark2")
+color_mapping <- c("Motif" = palette[4], "Random" = palette[1],"2" = palette[2], "3" = palette[8])
+library(dplyr)
+
+# 
+# 
+data_ge <- data_ge %>%
+  mutate(label = case_when(
+    label == 0 ~ "Motif",
+    label == 1 ~ "Random",
+    TRUE ~ as.character(label)  
+  ))
+
+ggplot(data_ge, aes(x = x_coord, y = y_coord, color = label)) +  
+  geom_point(alpha = 0.4) +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),  axis.line = element_blank(),       # 
+  axis.text.x = element_blank(),     
+  axis.text.y = element_blank(),     
+  axis.ticks = element_blank(),      
+  axis.title.x = element_blank(),   
+  axis.title.y = element_blank()     
+  ) +
+  
+  labs(color = "Cluster")+
+scale_color_manual(values = color_mapping)  
+```
+
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+getwd()
+setwd("./ht_selex_visual/ht_selex_visual")
+# read csv and tidy the data
+data_strings <- read.csv("./SOX9/sample_kmer.csv", header =  FALSE, col.names = c("string"))
+
+data_labels <- read.csv("./SOX9/sample_labels.csv",  header = FALSE, col.names = c("label"))
+
+data_coordinates <- read.csv("./SOX9pca Dimensionality Reduction.csv", header = TRUE)
+data_selected <- data_coordinates[, (ncol(data_coordinates) - 1):ncol(data_coordinates)]
+
+# rename 
+colnames(data_selected) <- c("x_coord", "y_coord")  # 假设新列名为x和y
+
+
+data_ge = cbind(data_strings, data_selected,data_labels)
+# 
+data_ge$label <- as.factor(data_ge$label)
+# choose a palette
+palette <- brewer.pal(7, "Dark2")
+color_mapping <- c("Motif" = palette[4], "Random" = palette[1],"2" = palette[2], "3" = palette[8])
+library(dplyr)
+
+#
+data_ge <- data_ge %>%
+  mutate(label = case_when(
+    label == 0 ~ "Motif",
+    label == 1 ~ "Random",
+    TRUE ~ as.character(label)  # 保留其他标签不变
+  ))
+
+ggplot(data_ge, aes(x = x_coord, y = y_coord, color = label)) +  
+  geom_point(alpha = 0.4) +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),  axis.line = element_blank(),       # 
+  axis.text.x = element_blank(),     # remove x-axis
+  axis.text.y = element_blank(),     # remove y-axis
+  axis.ticks = element_blank(),      # remove scale
+  axis.title.x = element_blank(),    # remove x title
+  axis.title.y = element_blank()     # remove y title
+  ) +
+  
+  labs(color = "Cluster")+
+scale_color_manual(values = color_mapping) 
+```
+
+### 2, score plot
+
+```{r}
+library(ggplot2)
+library(readr)
+library(reshape2)
+library(dplyr) # 确保加载了dplyr库
+
+# 加载数据
+df <- read_csv('results_new2_newmeme.csv')
+
+# 将数据从宽格式转换为长格式，仅包含Recall和Precision列
+long_df <- melt(df, measure.vars = c("Recall", "Precision"))
+
+# 使用dplyr计算每个变量的中位数，并准备文本标签
+medians <- long_df %>%
+  group_by(variable) %>%
+  summarize(median_value = median(value)) %>%
+  ungroup() # 计算完后取消分组
+# 为了互换中位线颜色，我们创建一个颜色映射
+color_mapping <- setNames(c("#4D98FF", "#FB88A1"), levels(medians$variable))
+
+# 绘制Recall和Precision的密度图，去除背景板，并且标出中位数的具体数值，中位线不在图例中显示
+p <- ggplot(long_df, aes(x=value, fill=variable)) +
+  geom_density(alpha=0.3) +
+  labs(x = "P/R", y = "Density") +
+  theme_minimal() +
+  theme(panel.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+    geom_vline(data = medians, aes(xintercept = median_value), color = ifelse(medians$variable == "Recall", color_mapping["Precision"], color_mapping["Recall"]), linetype = "dashed", size = 1, show.legend = FALSE) +
+   geom_text(data = medians, aes(x = median_value, y = 0, label = paste('Median:', round(median_value, 2))), vjust = 0, hjust = -0.1, size = 3, angle = 45, color = ifelse(medians$variable == "Recall", color_mapping["Precision"], color_mapping["Recall"]), show.legend = FALSE)  +
+  scale_color_manual(values = c("Recall" = "#4D98FF", "Precision" = "#FB88A1"))+scale_x_continuous(breaks = seq(from = 0, to = 1, by = 0.2))+guides(fill=guide_legend(title=NULL))
+
+# 显示图形
+print(p)
+
+
+```
+
+### 
+
+### 
+
+### 

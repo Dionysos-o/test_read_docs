@@ -1,0 +1,42 @@
+---
+title: "Figure for kmap paper"
+author: "Chengbo Fu"
+format: html
+editor: visual
+---
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+library(hrbrthemes)
+library(viridis)
+library(RColorBrewer)
+library(tidyr)
+
+data <- read.csv('etv6&FLI1_result.csv')
+
+ 
+data <- rename(data, Sample = 'X') # Replace 'Sample' with the exact column name
+
+# Reshape the data to long format using pivot_longer
+data_long <- data %>%
+  pivot_longer(cols = -Sample, names_to = "String", values_to = "Value") %>%
+  filter(Value != 0)
+
+# Assuming data_long has been created as per your provided steps
+data_long <- data_long %>%
+  mutate(String = factor(String, levels = unique(String)))  # Ensure order is maintained
+
+
+ggplot(data_long, aes(x=String, y=Sample, size=Value, fill=String)) +
+  geom_point(alpha=0.5, shape=21, color="black") +
+  scale_size_continuous(name="HB ratio", range=c(3, 12)) +
+  scale_fill_manual(values=c("#F68179", "#E69F00", "#F0E442", "#009E73", "#56B4E9", "#0072B2", "#CC79A7", "#999999", "#882255", "#D55E00","#8dd3c7")) +
+  theme_minimal() +
+  labs(y="Sample", x="Motif", title="FLI1&ETV6 Chip-Seq") + 
+ theme(legend.position="right",
+        axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  guides(fill = "none")  # 隐
+
+```
